@@ -35,7 +35,7 @@ class AnimationPractice extends StatefulWidget {
 
 class _AnimationPracticeState extends State<AnimationPractice> {
   List<List<double>> circleData = [];
-  final double _areaSize = 400;
+  final double _areaSize = 250;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,44 +44,51 @@ class _AnimationPracticeState extends State<AnimationPractice> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              child: Area(
-                circleData: circleData,
-                areaSize: _areaSize,
-              ),
-            ),
             Padding(
-              padding: const EdgeInsets.all(64),
+              padding: const EdgeInsets.all(0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
-                    'MEMORY',
-                    style: TextStyle(
-                      fontFamily: 'roboto',
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  SizedBox(height: 20),
+                  SizedBox(
+                    height: 100,
+                    child: const Text(
+                      'MEMORY',
+                      style: TextStyle(
+                        fontFamily: 'roboto',
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 50,
+                    child: GestureDetector(
+                      onTap: () {
+                        circleData = List.generate(
+                          Random().nextInt(20),
+                          (index) => [
+                            Random().nextInt(100) + 50.0,
+                            Random().nextInt(_areaSize.toInt()).toDouble(),
+                            Random().nextInt(_areaSize.toInt()).toDouble(),
+                            0.toDouble(),
+                            0.toDouble(),
+                          ],
+                        );
+                        setState(() {});
+                      },
+                      child: const HoverGradentButton(),
                     ),
                   ),
                   const SizedBox(
-                    height: 24,
+                    height: 20,
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      circleData = List.generate(
-                        Random().nextInt(20),
-                        (index) => [
-                          Random().nextInt(100) + 50.0,
-                          Random().nextInt(_areaSize.toInt()).toDouble(),
-                          Random().nextInt(_areaSize.toInt()).toDouble(),
-                          0.toDouble(),
-                          0.toDouble(),
-                        ],
-                      );
-                      setState(() {});
-                    },
-                    child: const HoverGradentButton(),
-                  )
+                  Area(
+                    padTop: 190,
+                    circleData: circleData,
+                    areaSize: _areaSize,
+                  ),
                 ],
               ),
             )
@@ -114,6 +121,7 @@ class _HoverGradentButtonState extends State<HoverGradentButton> with TickerProv
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      hitTestBehavior: HitTestBehavior.deferToChild,
       cursor: SystemMouseCursors.click,
       onEnter: (event) => _controller.forward(),
       onExit: (event) => _controller.reverse(),
@@ -152,9 +160,13 @@ class Area extends StatefulWidget {
     Key? key,
     required this.circleData,
     required this.areaSize,
+    this.padTop = 0,
+    this.padLeft = 0,
   }) : super(key: key);
   final List<List<double>> circleData;
   final double areaSize;
+  final double padTop;
+  final double padLeft;
 
   @override
   State<Area> createState() => _AreaState();
@@ -173,8 +185,8 @@ class _AreaState extends State<Area> {
 
   (double, double) getDistance({required posX, required posY, required mousePos, required size}) {
     print(mousePos);
-    double xGap1 = ((posX + size / 2) - mousePos.dx).abs();
-    double yGap1 = ((posY + size / 2) - mousePos.dy).abs();
+    double xGap1 = ((posX + widget.padLeft + size / 2) - mousePos.dx).abs();
+    double yGap1 = ((posY + widget.padTop + size / 2) - mousePos.dy).abs();
     return ((xGap1 / widget.areaSize) * blurValue, (yGap1 / widget.areaSize) * blurValue);
   }
 
@@ -224,8 +236,8 @@ class _AreaState extends State<Area> {
               tileMode: TileMode.mirror,
             ),
             child: Container(
-              width: widget.areaSize + 200,
-              height: widget.areaSize + 200,
+              width: widget.areaSize + 100,
+              height: widget.areaSize + 100,
             ),
           )
         ],
