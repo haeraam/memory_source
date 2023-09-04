@@ -3,7 +3,6 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,66 +32,84 @@ class AnimationPractice extends StatefulWidget {
   State<AnimationPractice> createState() => _AnimationPracticeState();
 }
 
-class _AnimationPracticeState extends State<AnimationPractice> {
+class _AnimationPracticeState extends State<AnimationPractice> with SingleTickerProviderStateMixin {
   List<List<double>> circleData = [];
-  final double _areaSize = 250;
+  final double _areaSize = 500;
+
+  final Tween<double> _blurTween = Tween(begin: 0, end: 1);
+  late Animation _blurAnimation;
+  late AnimationController _blurAnimationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _blurAnimationController = AnimationController(vsync: this, duration: const Duration(seconds: 1));
+    _blurAnimation = _blurTween.animate(CurvedAnimation(parent: _blurAnimationController, curve: Curves.easeIn));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 20),
-                  SizedBox(
-                    height: 100,
-                    child: const Text(
-                      'MEMORY',
-                      style: TextStyle(
-                        fontFamily: 'roboto',
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                const SizedBox(
+                  height: 100,
+                  child: Text(
+                    'MEMORY',
+                    style: TextStyle(
+                      fontFamily: 'roboto',
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
-                  SizedBox(
-                    height: 50,
-                    child: GestureDetector(
-                      onTap: () {
-                        circleData = List.generate(
-                          Random().nextInt(20),
-                          (index) => [
-                            Random().nextInt(100) + 50.0,
-                            Random().nextInt(_areaSize.toInt()).toDouble(),
-                            Random().nextInt(_areaSize.toInt()).toDouble(),
-                            0.toDouble(),
-                            0.toDouble(),
-                          ],
+                ),
+                SizedBox(
+                  height: 50,
+                  child: GestureDetector(
+                    onTap: () {
+                      circleData = List.generate(
+                        Random().nextInt(20),
+                        (index) => [
+                          Random().nextInt(100) + 50.0,
+                          Random().nextInt(_areaSize.toInt() - 150).toDouble(),
+                          Random().nextInt(_areaSize.toInt() - 150).toDouble(),
+                          1.toDouble(),
+                          1.toDouble(),
+                        ],
+                      );
+                      _blurAnimationController.reset();
+                      _blurAnimationController.forward();
+                      setState(() {});
+                    },
+                    child: const HoverGradentButton(),
+                  ),
+                ),
+                const SizedBox(
+                  height: 20,
+                ),
+                ClipRRect(
+                  child: AnimatedBuilder(
+                      animation: _blurAnimation,
+                      builder: (context, _) {
+                        return Area(
+                          padTop: 190,
+                          circleData: circleData,
+                          areaSize: _areaSize,
+                          blurSize: _blurAnimation.value,
                         );
-                        setState(() {});
-                      },
-                      child: const HoverGradentButton(),
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  Area(
-                    padTop: 190,
-                    circleData: circleData,
-                    areaSize: _areaSize,
-                  ),
-                ],
-              ),
-            )
-          ],
+                      }),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -121,7 +138,6 @@ class _HoverGradentButtonState extends State<HoverGradentButton> with TickerProv
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      hitTestBehavior: HitTestBehavior.deferToChild,
       cursor: SystemMouseCursors.click,
       onEnter: (event) => _controller.forward(),
       onExit: (event) => _controller.reverse(),
@@ -162,18 +178,21 @@ class Area extends StatefulWidget {
     required this.areaSize,
     this.padTop = 0,
     this.padLeft = 0,
+    required this.blurSize,
   }) : super(key: key);
   final List<List<double>> circleData;
   final double areaSize;
   final double padTop;
   final double padLeft;
+  final double blurSize;
 
   @override
   State<Area> createState() => _AreaState();
 }
 
 class _AreaState extends State<Area> {
-  int _index = 1;
+  Offset _mousePosition = Offset.zero;
+  double _lightSize = 10;
 
   double blurValue = 10;
 
@@ -184,9 +203,8 @@ class _AreaState extends State<Area> {
   double distanceY2 = 2;
 
   (double, double) getDistance({required posX, required posY, required mousePos, required size}) {
-    print(mousePos);
-    double xGap1 = ((posX + widget.padLeft + size / 2) - mousePos.dx).abs();
-    double yGap1 = ((posY + widget.padTop + size / 2) - mousePos.dy).abs();
+    double xGap1 = ((posX + size / 2) - mousePos.dx).abs();
+    double yGap1 = ((posY + size / 2) - mousePos.dy).abs();
     return ((xGap1 / widget.areaSize) * blurValue, (yGap1 / widget.areaSize) * blurValue);
   }
 
@@ -198,49 +216,138 @@ class _AreaState extends State<Area> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    _index = 0;
+  void initState() {
+    super.initState();
 
-    return MouseRegion(
-      onHover: (PointerHoverEvent e) {
+    setState(() {
+      _mousePosition = Offset(widget.areaSize / 2, widget.areaSize / 2);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (PointerEvent event) {
         setState(() {
+          _lightSize = 30;
+          blurValue = 4;
+          RenderBox box = context.findRenderObject() as RenderBox;
+          _mousePosition = box.globalToLocal(event.position);
+
           for (var circle in widget.circleData) {
-            var (x1, y1) = getDistance(posX: circle[1], posY: circle[2], mousePos: e.position, size: circle[0]);
+            var (x1, y1) = getDistance(posX: circle[1], posY: circle[2], mousePos: _mousePosition, size: circle[0]);
             circle[3] = x1;
             circle[4] = y1;
           }
         });
       },
-      child: Stack(
-        children: [
-          ...widget.circleData.map((circle) {
-            return Circle(
-              opacity: widget.circleData.length / (widget.circleData.length + (widget.circleData.length - _index++)),
-              size: circle[0],
-              posX: circle[1],
-              posY: circle[2],
-              distanceX: circle[3],
-              distanceY: circle[4],
-              colors: [
-                getColor(),
-                getColor(),
-                getColor(),
-                getColor(),
+      onPointerUp: (PointerEvent event) {
+        setState(() {
+          _lightSize = 10;
+          blurValue = 10;
+          RenderBox box = context.findRenderObject() as RenderBox;
+          _mousePosition = box.globalToLocal(event.position);
+
+          for (var circle in widget.circleData) {
+            var (x1, y1) = getDistance(posX: circle[1], posY: circle[2], mousePos: _mousePosition, size: circle[0]);
+            circle[3] = x1;
+            circle[4] = y1;
+          }
+        });
+      },
+      onPointerMove: (PointerEvent event) {
+        RenderBox box = context.findRenderObject() as RenderBox;
+        _mousePosition = box.globalToLocal(event.position);
+
+        for (var circle in widget.circleData) {
+          var (x1, y1) = getDistance(posX: circle[1], posY: circle[2], mousePos: _mousePosition, size: circle[0]);
+          circle[3] = x1;
+          circle[4] = y1;
+        }
+        setState(() {});
+      },
+      onPointerHover: (PointerEvent event) {
+        RenderBox box = context.findRenderObject() as RenderBox;
+        _mousePosition = box.globalToLocal(event.position);
+
+        for (var circle in widget.circleData) {
+          var (x1, y1) = getDistance(posX: circle[1], posY: circle[2], mousePos: _mousePosition, size: circle[0]);
+          circle[3] = x1;
+          circle[4] = y1;
+        }
+        setState(() {});
+      },
+      child: Container(
+        child: MouseRegion(
+          child: SizedBox(
+            width: widget.areaSize,
+            height: widget.areaSize,
+            child: Stack(
+              children: [
+                ...widget.circleData.map((circle) {
+                  return Circle(
+                    opacity: widget.blurSize,
+                    size: circle[0],
+                    posX: circle[1],
+                    posY: circle[2],
+                    distanceX: circle[3] * widget.blurSize,
+                    distanceY: circle[4] * widget.blurSize,
+                    colors: [
+                      getColor(),
+                      getColor(),
+                      getColor(),
+                      getColor(),
+                    ],
+                  );
+                }),
+                BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: 0.5,
+                    sigmaY: 0.5,
+                    tileMode: TileMode.mirror,
+                  ),
+                  child: SizedBox(
+                    width: widget.areaSize,
+                    height: widget.areaSize,
+                  ),
+                ),
+                Container(
+                  width: _lightSize,
+                  height: _lightSize,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.6),
+                        blurRadius: 60,
+                        spreadRadius: 20,
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.7),
+                        blurRadius: 20,
+                        spreadRadius: 12,
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.9),
+                        blurRadius: 14,
+                        spreadRadius: 3,
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.9),
+                        blurRadius: 1,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  margin: EdgeInsets.only(
+                    top: min(max(_mousePosition.dy - _lightSize / 2, 0), widget.areaSize),
+                    left: min(max(_mousePosition.dx - _lightSize / 2, 0), widget.areaSize),
+                  ),
+                )
               ],
-            );
-          }),
-          BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: 0.5,
-              sigmaY: 0.5,
-              tileMode: TileMode.mirror,
             ),
-            child: Container(
-              width: widget.areaSize + 100,
-              height: widget.areaSize + 100,
-            ),
-          )
-        ],
+          ),
+        ),
       ),
     );
   }
@@ -275,9 +382,6 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
   late AnimationController _colorAnimationController3;
   late AnimationController _colorAnimationController4;
 
-  late AnimationController _blurXAnimationController;
-  late AnimationController _blurYAnimationController;
-
   late AnimationController _bottomAlignAnimationController;
   late AnimationController _topAlignAnimationController;
 
@@ -286,13 +390,9 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
   late Animation _colorAnimation3;
   late Animation _colorAnimation4;
 
-  late Animation _blurXAnimation;
-  late Animation _blurYAnimation;
-
   late Animation _bottomAlignmentAnimation;
   late Animation _topAlignmentAnimation;
 
-  final Tween<double> _blurTween = Tween(begin: 4, end: 15);
   final Tween<Alignment> _bottomAlignTween = Tween(begin: Alignment.bottomRight, end: Alignment.bottomLeft);
   final Tween<Alignment> _topAlignTween = Tween(begin: Alignment.topRight, end: Alignment.topLeft);
 
@@ -304,8 +404,6 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
     _colorAnimationController2.dispose();
     _colorAnimationController3.dispose();
     _colorAnimationController4.dispose();
-    _blurXAnimationController.dispose();
-    _blurYAnimationController.dispose();
     _bottomAlignAnimationController.dispose();
     _topAlignAnimationController.dispose();
     super.dispose();
@@ -325,8 +423,6 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
     _colorAnimationController3 = AnimationController(duration: const Duration(milliseconds: 900), vsync: this);
     _colorAnimationController4 = AnimationController(duration: const Duration(milliseconds: 700), vsync: this);
 
-    _blurXAnimationController = AnimationController(duration: const Duration(milliseconds: 1100), vsync: this);
-    _blurYAnimationController = AnimationController(duration: const Duration(milliseconds: 1600), vsync: this);
     _bottomAlignAnimationController = AnimationController(duration: const Duration(milliseconds: 140), vsync: this);
     _topAlignAnimationController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
 
@@ -335,9 +431,6 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
     _colorAnimation3 = tweenColor3.animate(_colorAnimationController3);
     _colorAnimation4 = tweenColor4.animate(_colorAnimationController4);
 
-    _blurXAnimation = _blurTween.animate(_blurXAnimationController);
-    _blurYAnimation = _blurTween.animate(_blurYAnimationController);
-
     _bottomAlignmentAnimation = _bottomAlignTween.animate(_bottomAlignAnimationController);
     _topAlignmentAnimation = _topAlignTween.animate(_bottomAlignAnimationController);
 
@@ -345,21 +438,21 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
     _tickers.add(_colorAnimationController2.repeat(reverse: true));
     _tickers.add(_colorAnimationController3.repeat(reverse: true));
     _tickers.add(_colorAnimationController4.repeat(reverse: true));
-    _tickers.add(_blurXAnimationController.repeat(reverse: true));
-    _tickers.add(_blurYAnimationController.repeat(reverse: true));
     _tickers.add(_bottomAlignAnimationController.repeat(reverse: true));
     _tickers.add(_topAlignAnimationController.repeat(reverse: true));
   }
 
   @override
   Widget build(BuildContext context) {
+    double distance = sqrt(pow(widget.distanceX, 2) + pow(widget.distanceY, 2));
+    print(distance);
+
     return Container(
       margin: EdgeInsets.only(
         left: widget.posX,
         top: widget.posY,
       ),
       child: Stack(
-        alignment: Alignment.center,
         children: [
           AnimatedBuilder(
             animation: _colorAnimationController1,
@@ -373,34 +466,22 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
                     begin: _topAlignmentAnimation.value,
                     end: _bottomAlignmentAnimation.value,
                     colors: [
-                      _colorAnimation1.value.withOpacity(1 * (widget.opacity)),
-                      _colorAnimation2.value.withOpacity(1 * (widget.opacity)),
-                      _colorAnimation3.value.withOpacity(1 * (widget.opacity)),
-                      _colorAnimation4.value.withOpacity(1 * (widget.opacity)),
+                      _colorAnimation1.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
+                      _colorAnimation2.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
+                      _colorAnimation3.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
+                      _colorAnimation4.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
                     ],
                   ),
                 ),
               );
             },
           ),
-          ClipOval(
-            clipBehavior: Clip.antiAlias,
-            child: AnimatedBuilder(
-                animation: _blurXAnimationController,
-                builder: (context, child) {
-                  return BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: min(widget.distanceX * _blurXAnimation.value, 15),
-                      sigmaY: min(widget.distanceY * _blurYAnimation.value, 15),
-                    ),
-                    child: Container(
-                      width: widget.size,
-                      height: widget.size,
-                      // width: widget.size * (50 /( widget.distanceX + 50)),
-                      // height: widget.size * (50 / (widget.distanceY + 50)),
-                    ),
-                  );
-                }),
+          BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: widget.distanceX,
+              sigmaY: widget.distanceY,
+            ),
+            child: Container(),
           )
         ],
       ),
