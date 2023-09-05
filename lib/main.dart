@@ -343,7 +343,29 @@ class _AreaState extends State<Area> {
                     top: min(max(_mousePosition.dy - _lightSize / 2, 0), widget.areaSize),
                     left: min(max(_mousePosition.dx - _lightSize / 2, 0), widget.areaSize),
                   ),
-                )
+                ),
+                Transform.translate(
+                  offset: Offset(
+                    _mousePosition.dx - 250,
+                    _mousePosition.dy - 250,
+                  ),
+                  child: Transform.scale(
+                    scale: 2,
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.15,
+                        colors: [Colors.transparent, Colors.white.withOpacity(0.3), Colors.white],
+                        stops: const [0, 0.2, 1],
+                      ).createShader(bounds),
+                      child: Container(
+                        width: 500,
+                        height: 500,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -466,10 +488,10 @@ class _CircleState extends State<Circle> with TickerProviderStateMixin {
                     begin: _topAlignmentAnimation.value,
                     end: _bottomAlignmentAnimation.value,
                     colors: [
-                      _colorAnimation1.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
-                      _colorAnimation2.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
-                      _colorAnimation3.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
-                      _colorAnimation4.value.withOpacity(0.8 * (widget.opacity) / (max(1, distance)) / (max(1, distance))),
+                      _colorAnimation1.value.withOpacity(0.8 * (widget.opacity)),
+                      _colorAnimation2.value.withOpacity(0.8 * (widget.opacity)),
+                      _colorAnimation3.value.withOpacity(0.8 * (widget.opacity)),
+                      _colorAnimation4.value.withOpacity(0.8 * (widget.opacity)),
                     ],
                   ),
                 ),
